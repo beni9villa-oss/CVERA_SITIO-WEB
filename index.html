@@ -6,7 +6,7 @@
 <title>Cristóbal Flor Vera | Gestión Técnica, Seguros, Datos y Tecnología</title>
 <meta name="version" content="4.8">
 <meta name="description" content="Perfil profesional de Cristóbal Flor Vera: gestión técnica de seguros, suscripción, riesgos, análisis de cartera, datos y tecnología.">
-<script type="text/javascript" src="https://me.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=6PuR51wjN9eyAewlafTQk7P6IksG_3lkRnDTFKLqIRbqU0GZHQRaCvrrpPr1ugQ30mTp8W5qdAdJvTuWPmSo8R1SlJE8yLMnSU9py1_j_upVsw-3H4-BMf0MGMc2iUuY-lhi_2-R8U3GuWqsz0MmIRMlAqi0tOv4rfi9JHOh9b21IRoMp2KuwnltHujjEwqOXEAh2jkhwX_V7b5pRcbUEEzCnueButes5Q-rndWlo5j_S8wb3UFRqA18bva5BrTziskZQ8vnujsdhOwzqT_zLyNe-Stf1hzAuHQRVCN_sDUEG46QSEcHqh5tYQeR4bjyN7AZ9ey51PYUP4FHQklCXIZQbei2rYr4QbE1DyoyrHU" charset="UTF-8"></script><style>
+<script type="text/javascript" src="https://me.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=1GizBWsj71aGJcm-APq70kiQIhrPNjetdX815Cmpa30J6z2pZ8ljk9Ee2GHod4TJp5QgT3dYzZprqRY3LNT5pRrlBTvRMPbKk32-Pjqpc_Gi-sOnxoT7cseJLck8cuoX7piPBBUdIzDasLZ7MrPVOz64FfJzom90a_VLRpczM8ImUaweziLyLKYBsUaCTUEqzQhq0i5N9E8-ogHKebHyczRR4gDOtqz0wOxOGkSH8Pml4ImoYW3hxKCD-lfuhdB3VnlU5sqPYT4jqiz_88rv71f9jFaunKEIPBxK2Vf6VFz55TqdejEi5JrjEoPzu2udtXXpung6XDKY8gKaZYqaipIyXztG9ohCgKEWmqvkdag" charset="UTF-8"></script><style>
 :root{--bg:#07111f;--bg2:#0b1b2e;--card:#10243b;--gold:#d9b35f;--text:#f5f7fa;--muted:#aab8c8;--line:rgba(255,255,255,.1);--blue:#55a7ff}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,var(--bg),#08192b 55%,#06101c);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.6}
 a{color:inherit;text-decoration:none}.wrap{width:min(1160px,92%);margin:auto}
@@ -118,6 +118,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted)}.foot{
 .owner-login-submit{width:100%;margin-top:18px}
 .resource-delete{display:inline-flex;align-items:center;justify-content:center;padding:10px 13px;border-radius:11px;background:transparent;color:#ffb3b3;border:1px solid rgba(255,179,179,.28);font-weight:800;font-size:13px;cursor:pointer}
 .resource-delete:hover{background:rgba(255,179,179,.08);border-color:rgba(255,179,179,.5)}
+.resource-upload{display:inline-flex;align-items:center;justify-content:center;padding:10px 13px;border-radius:11px;background:transparent;color:#b9d9ff;border:1px solid rgba(85,167,255,.32);font-weight:800;font-size:13px;cursor:pointer}
+.resource-upload:hover{background:rgba(85,167,255,.09);border-color:rgba(85,167,255,.58)}
+.resource-upload:disabled,.resource-delete:disabled{opacity:.55;cursor:wait}
 .owner-file-note{color:var(--muted);font-size:12px;margin-top:6px}
 @media(max-width:700px){.owner-gate,.owner-admin-head{flex-direction:column;align-items:stretch}}
 
@@ -215,10 +218,11 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted)}.foot{
     <div class="owner-admin-head">
       <div>
         <div class="owner-eyebrow">SESIÓN AUTORIZADA</div>
-        <h3>Publicar material</h3>
+        <h3>Administrar materiales</h3>
       </div>
       <button class="owner-logout-btn" id="ownerLogout" type="button">Cerrar sesión</button>
     </div>
+    <p class="library-note">En las seis tarjetas principales aparecerá un botón para subir o reemplazar su documento. Este formulario queda disponible para publicar materiales adicionales.</p>
     <form class="library-form" id="ownerResourceForm">
       <div class="library-field"><label>Título</label><input id="ownerResTitle" required></div>
       <div class="library-field"><label>Categoría</label><select id="ownerResCategory"><option>Coberturas</option><option>Planes</option><option>Conceptos</option><option>Notas Técnicas</option><option>Asegurados</option><option>Productores</option><option>Normativa</option><option>Otros</option></select></div>
@@ -226,7 +230,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted)}.foot{
       <div class="library-field"><label>Tipo</label><select id="ownerResType"><option>PDF</option><option>Documento</option><option>Presentación</option><option>Video</option><option>Artículo</option><option>Enlace</option></select></div>
       <div class="library-field full"><label>Descripción</label><textarea id="ownerResDescription"></textarea></div>
       <div class="library-field full"><label>Archivo</label><input id="ownerResFile" type="file" required><div class="owner-file-note">El archivo se guardará en Supabase Storage, dentro del bucket público <strong>library</strong>.</div></div>
-      <div class="library-form-actions"><button class="library-admin-btn" id="ownerPublishBtn" type="submit">Subir y publicar material</button></div>
+      <div class="library-form-actions"><button class="library-admin-btn" id="ownerPublishBtn" type="submit">Publicar material adicional</button></div>
       <div class="library-status" id="ownerResourceStatus"></div>
     </form>
   </div>
@@ -335,7 +339,28 @@ function resourceIcon(type){
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 window.__remoteResources = [];
 window.__ownerAuthorized = false;
-function allResources(){return [...window.__remoteResources,...defaultResources,...getLocalResources()];}
+
+// Las seis tarjetas base funcionan como espacios fijos. Si existe en Supabase
+// un registro con el mismo título, el documento se enlaza a esa tarjeta en vez
+// de crear una tarjeta duplicada.
+function allResources(){
+  const remote=window.__remoteResources||[];
+  const slotTitles=new Set(defaultResources.map(r=>r.title));
+  const slots=defaultResources.map(slot=>{
+    const linked=remote.find(r=>r.title===slot.title);
+    if(!linked) return {...slot,slot:true,slot_id:slot.id};
+    return {
+      ...slot,
+      ...linked,
+      id:slot.id,
+      slot:true,
+      slot_id:slot.id,
+      remote_id:linked.id
+    };
+  });
+  const extras=remote.filter(r=>!slotTitles.has(r.title));
+  return [...slots,...extras,...getLocalResources()];
+}
 
 function renderResources(){
   const grid=document.getElementById('resourceGrid');
@@ -351,18 +376,26 @@ function renderResources(){
 
   grid.innerHTML=filtered.map(r=>{
     const hasUrl=Boolean((r.url||'').trim());
-    const action=hasUrl
+    const openAction=hasUrl
       ? `<a class="resource-link" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Abrir material ↗</a>`
-      : `<span class="resource-link disabled">Próximamente</span>`;
-    const deleteAction=(r.remote && window.__ownerAuthorized)
-      ? `<button class="resource-delete" type="button" data-resource-delete="${esc(r.id)}">Eliminar</button>`
       : '';
+
+    let ownerActions='';
+    if(window.__ownerAuthorized && r.slot){
+      ownerActions+=`<button class="resource-upload" type="button" data-slot-upload="${esc(r.slot_id)}">${hasUrl?'Reemplazar documento':'Subir documento'}</button>`;
+      if(r.remote_id){
+        ownerActions+=`<button class="resource-delete" type="button" data-resource-delete="${esc(r.remote_id)}">Quitar documento</button>`;
+      }
+    }else if(window.__ownerAuthorized && r.remote){
+      ownerActions+=`<button class="resource-delete" type="button" data-resource-delete="${esc(r.id)}">Eliminar</button>`;
+    }
+
     return `<article class="resource-card">
       <div class="resource-top"><div class="resource-icon">${resourceIcon(r.type)}</div><span class="resource-badge">${esc(r.category)}</span></div>
       <h3>${esc(r.title)}</h3>
       <p>${esc(r.description||'Material informativo de la biblioteca profesional.')}</p>
       <div class="resource-meta"><span>${esc(r.type||'Material')}</span><span>${esc(r.audience||'Público general')}</span>${r.file_name?`<span>${esc(r.file_name)}</span>`:''}</div>
-      <div class="resource-actions">${action}${deleteAction}</div>
+      ${(openAction||ownerActions)?`<div class="resource-actions">${openAction}${ownerActions}</div>`:''}
     </article>`;
   }).join('');
 
@@ -530,7 +563,7 @@ renderResources();
 
 
 <script>
-/* V5.1 - Biblioteca Supabase: proyecto correcto + Auth + Storage + recuperación robusta */
+/* V5.2 - Biblioteca Supabase: tarjetas fijas + carga directa por administrador */
 (() => {
   const OWNER_EMAIL="beni9villa@gmail.com";
   const OWNER_UID="153a3fc8-2d3c-4b65-84c0-77afc89fc84a";
@@ -766,6 +799,88 @@ renderResources();
     },1200);
   });
 
+  async function uploadFileToSlot(slotId,file){
+    const user=await currentOwner();
+    if(!user){
+      if(publishStatus) publishStatus.textContent="Acceso denegado.";
+      return;
+    }
+
+    const slot=defaultResources.find(r=>r.id===slotId);
+    if(!slot || !file) return;
+    if(file.size>50*1024*1024){
+      if(publishStatus) publishStatus.textContent="El archivo supera el límite de 50 MB del bucket.";
+      return;
+    }
+
+    const existing=(window.__remoteResources||[]).find(r=>r.title===slot.title);
+    const cleanName=safeFileName(file.name);
+    const unique=(crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const storagePath=`${user.id}/tarjetas/${slot.id}/${unique}-${cleanName}`;
+
+    if(publishStatus) publishStatus.textContent=`Subiendo documento para “${slot.title}”...`;
+
+    try{
+      const {error:uploadError}=await sbAdmin.storage
+        .from(BUCKET)
+        .upload(storagePath,file,{cacheControl:"3600",upsert:false,contentType:file.type||undefined});
+      if(uploadError) throw uploadError;
+
+      const payload={
+        title:slot.title,
+        category:slot.category,
+        audience:slot.audience,
+        resource_type:slot.type,
+        description:slot.description,
+        file_path:storagePath,
+        file_name:file.name,
+        created_by:user.id
+      };
+
+      if(existing){
+        const {error:updateError}=await sbAdmin
+          .from("library_resources")
+          .update(payload)
+          .eq("id",existing.id);
+        if(updateError){
+          await sbAdmin.storage.from(BUCKET).remove([storagePath]);
+          throw updateError;
+        }
+        if(existing.file_path && existing.file_path!==storagePath){
+          const {error:oldFileError}=await sbAdmin.storage.from(BUCKET).remove([existing.file_path]);
+          if(oldFileError) console.warn("No se pudo limpiar el archivo anterior:",oldFileError);
+        }
+        if(publishStatus) publishStatus.textContent=`Documento reemplazado correctamente en “${slot.title}”.`;
+      }else{
+        const {error:insertError}=await sbAdmin.from("library_resources").insert(payload);
+        if(insertError){
+          await sbAdmin.storage.from(BUCKET).remove([storagePath]);
+          throw insertError;
+        }
+        if(publishStatus) publishStatus.textContent=`Documento cargado correctamente en “${slot.title}”.`;
+      }
+
+      await loadRemoteResources();
+    }catch(error){
+      console.error("Slot upload error:",error);
+      if(publishStatus) publishStatus.textContent=`No se pudo guardar el documento: ${error?.message||"error desconocido"}`;
+    }
+  }
+
+  function chooseFileForSlot(slotId){
+    const input=document.createElement("input");
+    input.type="file";
+    input.accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt,.csv";
+    input.style.display="none";
+    document.body.appendChild(input);
+    input.addEventListener("change",async()=>{
+      const file=input.files?.[0];
+      input.remove();
+      if(file) await uploadFileToSlot(slotId,file);
+    },{once:true});
+    input.click();
+  }
+
   document.getElementById("ownerResourceForm")?.addEventListener("submit",async e=>{
     e.preventDefault();
     const user=await currentOwner();
@@ -851,9 +966,15 @@ renderResources();
   };
 
   document.getElementById("resourceGrid")?.addEventListener("click",e=>{
-    const btn=e.target.closest("[data-resource-delete]");
-    if(!btn) return;
-    window.__deleteLibraryResource(btn.getAttribute("data-resource-delete"));
+    const uploadBtn=e.target.closest("[data-slot-upload]");
+    if(uploadBtn){
+      chooseFileForSlot(uploadBtn.getAttribute("data-slot-upload"));
+      return;
+    }
+    const deleteBtn=e.target.closest("[data-resource-delete]");
+    if(deleteBtn){
+      window.__deleteLibraryResource(deleteBtn.getAttribute("data-resource-delete"));
+    }
   });
 
   // No registramos un segundo listener genérico aquí: podía competir con
