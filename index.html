@@ -6,7 +6,7 @@
 <title>Cristóbal Flor Vera | Gestión Técnica, Seguros, Datos y Tecnología</title>
 <meta name="version" content="4.8">
 <meta name="description" content="Perfil profesional de Cristóbal Flor Vera: gestión técnica de seguros, suscripción, riesgos, análisis de cartera, datos y tecnología.">
-<script type="text/javascript" src="https://me.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=xToTRWlbbW12LZaEm5o4ad2vRAfXhUaC6ByTev7TcuaCgS1QPvhmma1u76DyjyiOWLlM8t3isVlznuCOwFAeQEu2FR3Ab8FVGk-X12B7_Aam59d5HINlTiipIY2R0ODC5rnqK1Y6sRk4SUnydICTqw9yVSseYzDrKTkpka2eRUiYBWjg05gh-5URolSYWHEKAomvrttwUsUBcde5x2CO1FzAzk4O8M8KpB4jknRa0p0eZAVi5SongeiWUsSdl3ZwiFScUlue4y6DzRfwPRSQpKfwse57lysOpWeQscRq5Z7vFIJjpOnQYGRuH95r3fbMrO-b5EoVovzT8fs3QWTIZXPKG_VLj-Y-Psq95L9LHUQ" charset="UTF-8"></script><style>
+<style>
 :root{--bg:#07111f;--bg2:#0b1b2e;--card:#10243b;--gold:#d9b35f;--text:#f5f7fa;--muted:#aab8c8;--line:rgba(255,255,255,.1);--blue:#55a7ff}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,var(--bg),#08192b 55%,#06101c);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.6}
 a{color:inherit;text-decoration:none}.wrap{width:min(1160px,92%);margin:auto}
@@ -243,8 +243,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted)}.foot{
     <h3>Propietario de la web</h3>
     <p>Ingresá con tu cuenta autorizada de Supabase.</p>
     <form id="ownerLoginForm">
-      <div class="library-field"><label>Email</label><input id="ownerEmail" type="email" value="beni9villa@gmail.com" required></div>
-      <div class="library-field" style="margin-top:14px"><label>Contraseña</label><input id="ownerPassword" type="password" required></div>
+      <div class="library-field"><label>Email</label><input id="ownerEmail" type="email" placeholder="correo autorizado" autocomplete="username" required></div>
+      <div class="library-field" style="margin-top:14px"><label>Contraseña</label><input id="ownerPassword" type="password" autocomplete="current-password" required></div>
       <button class="library-admin-btn owner-login-submit" type="submit">Ingresar</button>
       <div class="library-status" id="ownerLoginStatus"></div>
       <button class="owner-forgot-btn" id="ownerForgotPassword" type="button">¿Olvidaste tu contraseña?</button>
@@ -572,11 +572,21 @@ renderResources();
 
 
 <script>
-/* V5.3 - Biblioteca Supabase: controles solo propietario + borrado de módulos */
+/* V5.5 - Biblioteca Supabase: dos propietarios autorizados + borrado de módulos */
 (() => {
-  const OWNER_EMAIL="beni9villa@gmail.com";
-  const OWNER_UID="153a3fc8-2d3c-4b65-84c0-77afc89fc84a";
+  const OWNERS=[
+    { email:"beni9villa@gmail.com", uid:"153a3fc8-2d3c-4b65-84c0-77afc89fc84a" },
+    { email:"sertec1970@gmail.com", uid:"4404d017-0b26-4fb1-a501-0516fba2bc00" }
+  ];
   const BUCKET="library";
+
+  function isAuthorizedOwner(user){
+    if(!user) return false;
+    const email=(user.email||"").toLowerCase();
+    return OWNERS.some(owner =>
+      user.id===owner.uid && email===owner.email.toLowerCase()
+    );
+  }
 
   // Guardamos la URL ANTES de crear el cliente. Supabase puede limpiar
   // automáticamente los tokens/códigos de recuperación de la barra de direcciones.
@@ -611,9 +621,7 @@ renderResources();
     const {data,error}=await sbAdmin.auth.getUser();
     if(error || !data?.user) return null;
     const user=data.user;
-    const correctUid=user.id===OWNER_UID;
-    const correctEmail=(user.email||"").toLowerCase()===OWNER_EMAIL.toLowerCase();
-    return (correctUid && correctEmail) ? user : null;
+    return isAuthorizedOwner(user) ? user : null;
   }
 
   async function ownerActionUser(){
@@ -691,7 +699,7 @@ renderResources();
       }
       return;
     }
-    if(data?.user?.id!==OWNER_UID || (data?.user?.email||"").toLowerCase()!==OWNER_EMAIL.toLowerCase()){
+    if(!isAuthorizedOwner(data?.user)){
       await sbAdmin.auth.signOut();
       if(loginStatus) loginStatus.textContent="Cuenta no autorizada.";
       return;
@@ -728,6 +736,11 @@ renderResources();
     const email=document.getElementById("ownerEmail")?.value.trim();
     if(!email){
       if(loginStatus) loginStatus.textContent="Ingresá tu email primero.";
+      return;
+    }
+    const allowedEmail=OWNERS.some(owner=>owner.email.toLowerCase()===email.toLowerCase());
+    if(!allowedEmail){
+      if(loginStatus) loginStatus.textContent="Ese correo no está autorizado como propietario.";
       return;
     }
     if(loginStatus) loginStatus.textContent="Enviando correo de recuperación...";
