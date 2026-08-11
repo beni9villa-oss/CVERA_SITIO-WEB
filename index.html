@@ -6,7 +6,7 @@
 <title>Cristóbal Flor Vera | Gestión Técnica, Seguros, Datos y Tecnología</title>
 <meta name="version" content="4.8">
 <meta name="description" content="Perfil profesional de Cristóbal Flor Vera: gestión técnica de seguros, suscripción, riesgos, análisis de cartera, datos y tecnología.">
-<script type="text/javascript" src="https://me.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=1GizBWsj71aGJcm-APq70kiQIhrPNjetdX815Cmpa30J6z2pZ8ljk9Ee2GHod4TJp5QgT3dYzZprqRY3LNT5pRrlBTvRMPbKk32-Pjqpc_Gi-sOnxoT7cseJLck8cuoX7piPBBUdIzDasLZ7MrPVOz64FfJzom90a_VLRpczM8ImUaweziLyLKYBsUaCTUEqzQhq0i5N9E8-ogHKebHyczRR4gDOtqz0wOxOGkSH8Pml4ImoYW3hxKCD-lfuhdB3VnlU5sqPYT4jqiz_88rv71f9jFaunKEIPBxK2Vf6VFz55TqdejEi5JrjEoPzu2udtXXpung6XDKY8gKaZYqaipIyXztG9ohCgKEWmqvkdag" charset="UTF-8"></script><style>
+<style>
 :root{--bg:#07111f;--bg2:#0b1b2e;--card:#10243b;--gold:#d9b35f;--text:#f5f7fa;--muted:#aab8c8;--line:rgba(255,255,255,.1);--blue:#55a7ff}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(135deg,var(--bg),#08192b 55%,#06101c);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.6}
 a{color:inherit;text-decoration:none}.wrap{width:min(1160px,92%);margin:auto}
@@ -340,6 +340,15 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 window.__remoteResources = [];
 window.__ownerAuthorized = false;
 
+// V5.3: los antiguos materiales guardados solo en localStorage ya no forman
+// parte de la biblioteca global. Limpiamos específicamente el módulo accidental
+// llamado "dsada" para que desaparezca también del navegador donde se creó.
+try{
+  const legacyItems=getLocalResources();
+  const cleanedLegacy=legacyItems.filter(r=>String(r?.title||'').trim().toLowerCase()!=="dsada");
+  if(cleanedLegacy.length!==legacyItems.length) setLocalResources(cleanedLegacy);
+}catch(_){ }
+
 // Las seis tarjetas base funcionan como espacios fijos. Si existe en Supabase
 // un registro con el mismo título, el documento se enlaza a esa tarjeta en vez
 // de crear una tarjeta duplicada.
@@ -359,7 +368,7 @@ function allResources(){
     };
   });
   const extras=remote.filter(r=>!slotTitles.has(r.title));
-  return [...slots,...extras,...getLocalResources()];
+  return [...slots,...extras];
 }
 
 function renderResources(){
@@ -387,7 +396,7 @@ function renderResources(){
         ownerActions+=`<button class="resource-delete" type="button" data-resource-delete="${esc(r.remote_id)}">Quitar documento</button>`;
       }
     }else if(window.__ownerAuthorized && r.remote){
-      ownerActions+=`<button class="resource-delete" type="button" data-resource-delete="${esc(r.id)}">Eliminar</button>`;
+      ownerActions+=`<button class="resource-delete" type="button" data-resource-delete="${esc(r.id)}">Borrar módulo</button>`;
     }
 
     return `<article class="resource-card">
@@ -563,7 +572,7 @@ renderResources();
 
 
 <script>
-/* V5.2 - Biblioteca Supabase: tarjetas fijas + carga directa por administrador */
+/* V5.3 - Biblioteca Supabase: controles solo propietario + borrado de módulos */
 (() => {
   const OWNER_EMAIL="beni9villa@gmail.com";
   const OWNER_UID="153a3fc8-2d3c-4b65-84c0-77afc89fc84a";
@@ -592,6 +601,12 @@ renderResources();
   const publishStatus=document.getElementById("ownerResourceStatus");
   const publishBtn=document.getElementById("ownerPublishBtn");
 
+  // La sesión de Supabase puede persistir en el navegador. Aun así, los
+  // controles administrativos permanecen bloqueados hasta que el propietario
+  // vuelva a autenticarse desde "Acceso propietario" en esta carga de página.
+  let ownerUiUnlocked=false;
+  const DSADA_CLEANUP_KEY="cfv_v53_dsada_cleanup_done";
+
   async function currentOwner(){
     const {data,error}=await sbAdmin.auth.getUser();
     if(error || !data?.user) return null;
@@ -601,8 +616,15 @@ renderResources();
     return (correctUid && correctEmail) ? user : null;
   }
 
+  async function ownerActionUser(){
+    if(!ownerUiUnlocked) return null;
+    return await currentOwner();
+  }
+
   async function refreshAuthUI(){
-    const user=await currentOwner();
+    const signedOwner=await currentOwner();
+    if(!signedOwner) ownerUiUnlocked=false;
+    const user=ownerUiUnlocked ? signedOwner : null;
     const ok=Boolean(user);
     window.__ownerAuthorized=ok;
     if(gate) gate.hidden=ok;
@@ -674,12 +696,16 @@ renderResources();
       if(loginStatus) loginStatus.textContent="Cuenta no autorizada.";
       return;
     }
+    ownerUiUnlocked=true;
     if(modal) modal.hidden=true;
     if(loginStatus) loginStatus.textContent="";
     await refreshAuthUI();
+    await cleanupAccidentalDsada();
   });
 
   document.getElementById("ownerLogout")?.addEventListener("click",async()=>{
+    ownerUiUnlocked=false;
+    window.__ownerAuthorized=false;
     await sbAdmin.auth.signOut();
     if(publishStatus) publishStatus.textContent="";
     await refreshAuthUI();
@@ -768,6 +794,10 @@ renderResources();
       showRecoveryUI("Enlace validado. Escribí tu nueva contraseña.");
       return;
     }
+    if(event==="SIGNED_OUT"){
+      ownerUiUnlocked=false;
+      window.__ownerAuthorized=false;
+    }
     if(!recoveryMode && (event==="SIGNED_IN" || event==="SIGNED_OUT" || event==="TOKEN_REFRESHED")){
       setTimeout(()=>refreshAuthUI(),0);
     }
@@ -793,16 +823,50 @@ renderResources();
     // Limpiamos tokens/códigos de recuperación de la URL sin recargar la página.
     try{ history.replaceState(null,"",window.location.pathname); }catch(_){}
     setTimeout(async()=>{
+      ownerUiUnlocked=false;
+      window.__ownerAuthorized=false;
       if(resetPanel) resetPanel.hidden=true;
       if(modal) modal.hidden=true;
       await refreshAuthUI();
     },1200);
   });
 
+  async function cleanupAccidentalDsada(){
+    // Petición expresa del propietario: eliminar una sola vez el módulo accidental
+    // cuyo título sea exactamente "dsada". Solo se ejecuta tras autenticar al owner.
+    if(localStorage.getItem(DSADA_CLEANUP_KEY)==="1") return;
+    const user=await ownerActionUser();
+    if(!user) return;
+
+    const matches=(window.__remoteResources||[]).filter(r=>
+      String(r?.title||"").trim().toLowerCase()==="dsada"
+    );
+
+    let hadError=false;
+    for(const item of matches){
+      const {error:dbError}=await sbAdmin.from("library_resources").delete().eq("id",item.id);
+      if(dbError){
+        console.error("No se pudo borrar el módulo accidental dsada:",dbError);
+        hadError=true;
+        continue;
+      }
+      if(item.file_path){
+        const {error:storageError}=await sbAdmin.storage.from(BUCKET).remove([item.file_path]);
+        if(storageError) console.warn("El registro dsada se borró, pero quedó un archivo huérfano en Storage:",storageError);
+      }
+    }
+
+    if(!hadError){
+      localStorage.setItem(DSADA_CLEANUP_KEY,"1");
+      if(matches.length && publishStatus) publishStatus.textContent='Se eliminó automáticamente el módulo accidental “dsada”.';
+    }
+    if(matches.length) await loadRemoteResources();
+  }
+
   async function uploadFileToSlot(slotId,file){
-    const user=await currentOwner();
+    const user=await ownerActionUser();
     if(!user){
-      if(publishStatus) publishStatus.textContent="Acceso denegado.";
+      if(publishStatus) publishStatus.textContent="Acceso denegado. Iniciá sesión como propietario.";
       return;
     }
 
@@ -883,9 +947,9 @@ renderResources();
 
   document.getElementById("ownerResourceForm")?.addEventListener("submit",async e=>{
     e.preventDefault();
-    const user=await currentOwner();
+    const user=await ownerActionUser();
     if(!user){
-      if(publishStatus) publishStatus.textContent="Acceso denegado.";
+      if(publishStatus) publishStatus.textContent="Acceso denegado. Iniciá sesión como propietario.";
       return;
     }
 
@@ -942,9 +1006,9 @@ renderResources();
   });
 
   window.__deleteLibraryResource=async function(id){
-    const user=await currentOwner();
+    const user=await ownerActionUser();
     if(!user){
-      if(publishStatus) publishStatus.textContent="Acceso denegado.";
+      if(publishStatus) publishStatus.textContent="Acceso denegado. Iniciá sesión como propietario.";
       return;
     }
     const item=(window.__remoteResources||[]).find(r=>String(r.id)===String(id));
@@ -953,10 +1017,12 @@ renderResources();
 
     if(publishStatus) publishStatus.textContent="Eliminando material...";
     try{
-      const {error:storageError}=await sbAdmin.storage.from(BUCKET).remove([item.file_path]);
-      if(storageError) throw storageError;
       const {error:dbError}=await sbAdmin.from("library_resources").delete().eq("id",item.id);
       if(dbError) throw dbError;
+      if(item.file_path){
+        const {error:storageError}=await sbAdmin.storage.from(BUCKET).remove([item.file_path]);
+        if(storageError) console.warn("El módulo se eliminó de la biblioteca, pero no se pudo limpiar el archivo de Storage:",storageError);
+      }
       if(publishStatus) publishStatus.textContent="Material eliminado correctamente.";
       await loadRemoteResources();
     }catch(error){
@@ -968,11 +1034,13 @@ renderResources();
   document.getElementById("resourceGrid")?.addEventListener("click",e=>{
     const uploadBtn=e.target.closest("[data-slot-upload]");
     if(uploadBtn){
+      if(!window.__ownerAuthorized) return;
       chooseFileForSlot(uploadBtn.getAttribute("data-slot-upload"));
       return;
     }
     const deleteBtn=e.target.closest("[data-resource-delete]");
     if(deleteBtn){
+      if(!window.__ownerAuthorized) return;
       window.__deleteLibraryResource(deleteBtn.getAttribute("data-resource-delete"));
     }
   });
