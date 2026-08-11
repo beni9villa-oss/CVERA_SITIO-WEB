@@ -121,6 +121,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted)}.foot{
 .owner-file-note{color:var(--muted);font-size:12px;margin-top:6px}
 @media(max-width:700px){.owner-gate,.owner-admin-head{flex-direction:column;align-items:stretch}}
 
+
+/* V4.7 - Recuperación de contraseña propietario */
+.owner-forgot-btn{display:block;margin:12px auto 0;background:transparent;border:0;color:#b9d9ff;text-decoration:underline;cursor:pointer;font:inherit;font-size:13px}
+.owner-reset-panel{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.owner-reset-panel[hidden]{display:none!important}
+
 </style>
 </head>
 <body>
@@ -237,6 +243,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted)}.foot{
       <div class="library-field" style="margin-top:14px"><label>Contraseña</label><input id="ownerPassword" type="password" required></div>
       <button class="library-admin-btn owner-login-submit" type="submit">Ingresar</button>
       <div class="library-status" id="ownerLoginStatus"></div>
+      <button class="owner-forgot-btn" id="ownerForgotPassword" type="button">¿Olvidaste tu contraseña?</button>
+      <div class="owner-reset-panel" id="ownerResetPanel" hidden>
+        <div class="library-field"><label>Nueva contraseña</label><input id="ownerNewPassword" type="password" minlength="8" placeholder="Mínimo 8 caracteres"></div>
+        <button class="library-admin-btn owner-login-submit" id="ownerSaveNewPassword" type="button">Guardar nueva contraseña</button>
+        <div class="library-status" id="ownerResetStatus"></div>
+      </div>
     </form>
   </div>
 </div>
@@ -626,6 +638,64 @@ renderResources();
     await sbAdmin.auth.signOut();
     if(publishStatus) publishStatus.textContent="";
     await refreshAuthUI();
+  });
+
+  const forgotBtn=document.getElementById("ownerForgotPassword");
+  const resetPanel=document.getElementById("ownerResetPanel");
+  const resetStatus=document.getElementById("ownerResetStatus");
+  const newPassword=document.getElementById("ownerNewPassword");
+  const saveNewPassword=document.getElementById("ownerSaveNewPassword");
+
+  forgotBtn?.addEventListener("click",async()=>{
+    const email=document.getElementById("ownerEmail")?.value.trim();
+    if(!email){
+      if(loginStatus) loginStatus.textContent="Ingresá tu email primero.";
+      return;
+    }
+    if(loginStatus) loginStatus.textContent="Enviando correo de recuperación...";
+    const {error}=await sbAdmin.auth.resetPasswordForEmail(email,{
+      redirectTo:"https://beni9villa-oss.github.io/CVERA_SITIO-WEB/"
+    });
+    if(error){
+      console.error("Supabase password reset:",error);
+      if(loginStatus) loginStatus.textContent="Error de Supabase: "+(error.message||"No se pudo enviar el correo.");
+      return;
+    }
+    if(loginStatus) loginStatus.textContent="Te enviamos un correo para restablecer la contraseña.";
+  });
+
+  sbAdmin.auth.onAuthStateChange(async(event,session)=>{
+    if(event==="PASSWORD_RECOVERY"){
+      if(modal) modal.hidden=false;
+      if(resetPanel) resetPanel.hidden=false;
+      if(loginStatus) loginStatus.textContent="Enlace de recuperación validado. Definí tu nueva contraseña.";
+      setTimeout(()=>newPassword?.focus(),100);
+    }
+    if(event==="SIGNED_IN" || event==="SIGNED_OUT" || event==="TOKEN_REFRESHED") {
+      await refreshAuthUI();
+    }
+  });
+
+  saveNewPassword?.addEventListener("click",async()=>{
+    const password=(newPassword?.value||"").trim();
+    if(password.length<8){
+      if(resetStatus) resetStatus.textContent="La contraseña debe tener al menos 8 caracteres.";
+      return;
+    }
+    if(resetStatus) resetStatus.textContent="Guardando nueva contraseña...";
+    const {error}=await sbAdmin.auth.updateUser({password});
+    if(error){
+      console.error("Supabase update password:",error);
+      if(resetStatus) resetStatus.textContent="Error de Supabase: "+(error.message||"No se pudo actualizar la contraseña.");
+      return;
+    }
+    if(resetStatus) resetStatus.textContent="Contraseña actualizada correctamente.";
+    if(newPassword) newPassword.value="";
+    setTimeout(async()=>{
+      if(resetPanel) resetPanel.hidden=true;
+      if(modal) modal.hidden=true;
+      await refreshAuthUI();
+    },900);
   });
 
   document.getElementById("ownerResourceForm")?.addEventListener("submit",async e=>{
