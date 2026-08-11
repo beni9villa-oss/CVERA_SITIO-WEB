@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cristóbal Flor Vera | Gestión Técnica, Seguros, Datos y Tecnología</title>
-<meta name="version" content="4.4">
+<meta name="version" content="4.8">
 <meta name="description" content="Perfil profesional de Cristóbal Flor Vera: gestión técnica de seguros, suscripción, riesgos, análisis de cartera, datos y tecnología.">
 <style>
 :root{--bg:#07111f;--bg2:#0b1b2e;--card:#10243b;--gold:#d9b35f;--text:#f5f7fa;--muted:#aab8c8;--line:rgba(255,255,255,.1);--blue:#55a7ff}
@@ -535,9 +535,21 @@ renderResources();
   const OWNER_EMAIL="sertec1970@gmail.com";
   const OWNER_UID="4404d017-0b26-4fb1-a501-0516fba2bc00";
   const BUCKET="library";
+
+  // Guardamos la URL ANTES de crear el cliente. Supabase puede limpiar
+  // automáticamente los tokens/códigos de recuperación de la barra de direcciones.
+  const INITIAL_URL=new URL(window.location.href);
+  const INITIAL_HASH=new URLSearchParams((window.location.hash||"").replace(/^#/,""));
+  const RECOVERY_URL_HINT=(
+    INITIAL_HASH.get("type")==="recovery" ||
+    INITIAL_URL.searchParams.get("type")==="recovery" ||
+    INITIAL_URL.searchParams.has("code")
+  );
+
   const sbAdmin=window.supabase.createClient(
     "https://bzerbqqmftdvhuorefqh.supabase.co",
-    "sb_publishable_BGTA3uyTYOyl6qzvi8y5Kg_xIaj9mAt"
+    "sb_publishable_BGTA3uyTYOyl6qzvi8y5Kg_xIaj9mAt",
+    { auth:{ detectSessionInUrl:true, persistSession:true, autoRefreshToken:true } }
   );
 
   const gate=document.getElementById("ownerGate");
@@ -646,6 +658,13 @@ renderResources();
   const newPassword=document.getElementById("ownerNewPassword");
   const saveNewPassword=document.getElementById("ownerSaveNewPassword");
 
+  function showRecoveryUI(message="Enlace de recuperación validado. Definí tu nueva contraseña."){
+    if(modal) modal.hidden=false;
+    if(resetPanel) resetPanel.hidden=false;
+    if(loginStatus) loginStatus.textContent=message;
+    setTimeout(()=>newPassword?.focus(),100);
+  }
+
   forgotBtn?.addEventListener("click",async()=>{
     const email=document.getElementById("ownerEmail")?.value.trim();
     if(!email){
@@ -664,17 +683,32 @@ renderResources();
     if(loginStatus) loginStatus.textContent="Te enviamos un correo para restablecer la contraseña.";
   });
 
+  // IMPORTANTE: escuchar PASSWORD_RECOVERY y mostrar el formulario de cambio.
   sbAdmin.auth.onAuthStateChange(async(event,session)=>{
+    console.log("Supabase auth event:",event);
     if(event==="PASSWORD_RECOVERY"){
-      if(modal) modal.hidden=false;
-      if(resetPanel) resetPanel.hidden=false;
-      if(loginStatus) loginStatus.textContent="Enlace de recuperación validado. Definí tu nueva contraseña.";
-      setTimeout(()=>newPassword?.focus(),100);
+      showRecoveryUI();
+      return;
     }
     if(event==="SIGNED_IN" || event==="SIGNED_OUT" || event==="TOKEN_REFRESHED") {
       await refreshAuthUI();
     }
   });
+
+  // Respaldo para GitHub Pages: si la URL venía de un enlace de recuperación
+  // pero el evento ocurrió antes de que el listener terminara de registrarse,
+  // comprobamos la sesión y abrimos igualmente el formulario de nueva contraseña.
+  if(RECOVERY_URL_HINT){
+    setTimeout(async()=>{
+      const {data,error}=await sbAdmin.auth.getSession();
+      if(data?.session){
+        showRecoveryUI();
+      }else if(error){
+        console.error("Recovery session error:",error);
+        showRecoveryUI("El enlace llegó a la web, pero Supabase no pudo validar la sesión. Pedí un enlace nuevo.");
+      }
+    },350);
+  }
 
   saveNewPassword?.addEventListener("click",async()=>{
     const password=(newPassword?.value||"").trim();
@@ -689,13 +723,15 @@ renderResources();
       if(resetStatus) resetStatus.textContent="Error de Supabase: "+(error.message||"No se pudo actualizar la contraseña.");
       return;
     }
-    if(resetStatus) resetStatus.textContent="Contraseña actualizada correctamente.";
+    if(resetStatus) resetStatus.textContent="Contraseña actualizada correctamente. Ya podés usarla para iniciar sesión.";
     if(newPassword) newPassword.value="";
+    // Limpiamos tokens/códigos de recuperación de la URL sin recargar la página.
+    try{ history.replaceState(null,"",window.location.pathname); }catch(_){}
     setTimeout(async()=>{
       if(resetPanel) resetPanel.hidden=true;
       if(modal) modal.hidden=true;
       await refreshAuthUI();
-    },900);
+    },1200);
   });
 
   document.getElementById("ownerResourceForm")?.addEventListener("submit",async e=>{
@@ -788,7 +824,8 @@ renderResources();
     window.__deleteLibraryResource(btn.getAttribute("data-resource-delete"));
   });
 
-  sbAdmin.auth.onAuthStateChange(()=>{ refreshAuthUI(); });
+  // No registramos un segundo listener genérico aquí: podía competir con
+  // PASSWORD_RECOVERY y dejar la interfaz en estado de administración normal.
   loadRemoteResources();
   refreshAuthUI();
 })();
