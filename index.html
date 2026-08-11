@@ -530,7 +530,7 @@ renderResources();
 
 
 <script>
-/* V4.5 - Biblioteca Supabase: Auth + Storage + Database */
+/* V5.0 - Biblioteca Supabase: Auth + Storage + Database + recuperación robusta */
 (() => {
   const OWNER_EMAIL="beni9villa@gmail.com";
   const OWNER_UID="153a3fc8-2d3c-4b65-84c0-77afc89fc84a";
@@ -683,32 +683,64 @@ renderResources();
     if(loginStatus) loginStatus.textContent="Te enviamos un correo para restablecer la contraseña.";
   });
 
-  // IMPORTANTE: escuchar PASSWORD_RECOVERY y mostrar el formulario de cambio.
-  sbAdmin.auth.onAuthStateChange(async(event,session)=>{
+  // Recuperación robusta para GitHub Pages.
+  // Supabase puede devolver un código PKCE (?code=...) o tokens en el hash (#access_token=...).
+  // Los procesamos explícitamente en lugar de depender únicamente de PASSWORD_RECOVERY.
+  let recoveryMode = RECOVERY_URL_HINT || INITIAL_HASH.has("access_token") || INITIAL_HASH.has("refresh_token");
+
+  async function bootstrapRecovery(){
+    if(!recoveryMode) return false;
+
+    // Mostramos la interfaz inmediatamente para que el usuario vea que el enlace fue reconocido.
+    showRecoveryUI("Validando enlace de recuperación con Supabase...");
+
+    try{
+      const authCode = INITIAL_URL.searchParams.get("code");
+      const accessToken = INITIAL_HASH.get("access_token");
+      const refreshToken = INITIAL_HASH.get("refresh_token");
+
+      if(authCode){
+        const {error}=await sbAdmin.auth.exchangeCodeForSession(authCode);
+        if(error) throw error;
+      }else if(accessToken && refreshToken){
+        const {error}=await sbAdmin.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        if(error) throw error;
+      }
+
+      const {data,error}=await sbAdmin.auth.getSession();
+      if(error) throw error;
+
+      if(data?.session){
+        showRecoveryUI("Enlace validado. Escribí tu nueva contraseña.");
+        return true;
+      }
+
+      showRecoveryUI("El enlace llegó a la página, pero no se pudo crear la sesión de recuperación. Solicitá un enlace nuevo.");
+      return false;
+    }catch(error){
+      console.error("Supabase recovery bootstrap:",error);
+      showRecoveryUI("Error al validar el enlace: "+(error?.message||"enlace inválido o vencido"));
+      return false;
+    }
+  }
+
+  // Escucha de respaldo. No hacemos trabajo asíncrono dentro del callback.
+  sbAdmin.auth.onAuthStateChange((event,session)=>{
     console.log("Supabase auth event:",event);
     if(event==="PASSWORD_RECOVERY"){
-      showRecoveryUI();
+      recoveryMode=true;
+      showRecoveryUI("Enlace validado. Escribí tu nueva contraseña.");
       return;
     }
-    if(event==="SIGNED_IN" || event==="SIGNED_OUT" || event==="TOKEN_REFRESHED") {
-      await refreshAuthUI();
+    if(!recoveryMode && (event==="SIGNED_IN" || event==="SIGNED_OUT" || event==="TOKEN_REFRESHED")){
+      setTimeout(()=>refreshAuthUI(),0);
     }
   });
 
-  // Respaldo para GitHub Pages: si la URL venía de un enlace de recuperación
-  // pero el evento ocurrió antes de que el listener terminara de registrarse,
-  // comprobamos la sesión y abrimos igualmente el formulario de nueva contraseña.
-  if(RECOVERY_URL_HINT){
-    setTimeout(async()=>{
-      const {data,error}=await sbAdmin.auth.getSession();
-      if(data?.session){
-        showRecoveryUI();
-      }else if(error){
-        console.error("Recovery session error:",error);
-        showRecoveryUI("El enlace llegó a la web, pero Supabase no pudo validar la sesión. Pedí un enlace nuevo.");
-      }
-    },350);
-  }
+  bootstrapRecovery();
 
   saveNewPassword?.addEventListener("click",async()=>{
     const password=(newPassword?.value||"").trim();
